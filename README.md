@@ -33,13 +33,17 @@ Unlike flat RAG tools that return "chunks about X", Knowledge Master builds a **
 ## Quick Start
 
 ```bash
-# Clone
+# Install (pick one)
+pip install knowledge-master          # from PyPI
+pipx install knowledge-master         # isolated install (recommended)
+
+# Or from source
 git clone https://github.com/subzone/knowledge-master.git
 cd knowledge-master
-
-# One command setup
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
+
+# One command setup
 km start
 
 # Index your first repo

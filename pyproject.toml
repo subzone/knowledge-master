@@ -1,26 +1,55 @@
 [project]
 name = "knowledge-master"
 version = "0.1.0"
-description = "Local-first personal RAG knowledge base with FalkorDB graph+vector and MCP server"
+description = "Local-first knowledge graph for developers. Your AI agent's permanent memory."
 requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Milenko Mitrovic"}]
+readme = "README.md"
+keywords = ["rag", "knowledge-graph", "mcp", "ai", "developer-tools", "vector-search"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
-    "falkordb==1.6.1",
-    "ollama==0.4.8",
-    "mcp==1.9.3",
-    "typer==0.15.4",
-    "gitpython==3.1.44",
-    "rich==14.0.0",
-    "fastapi==0.115.12",
-    "uvicorn==0.34.3",
+    "falkordb>=1.6.0,<2.0",
+    "ollama>=0.4.0,<1.0",
+    "mcp>=1.9.0,<2.0",
+    "typer>=0.15.0,<1.0",
+    "gitpython>=3.1.0,<4.0",
+    "rich>=14.0.0,<15.0",
+    "fastapi>=0.115.0,<1.0",
+    "uvicorn>=0.34.0,<1.0",
 ]
 
 [project.optional-dependencies]
-office = ["python-docx==1.1.2", "openpyxl==3.1.5", "pypdf==5.4.0"]
-dev = ["pytest==8.3.5", "ruff==0.11.12"]
+office = ["python-docx>=1.1.0,<2.0", "openpyxl>=3.1.0,<4.0", "pypdf>=5.0,<6.0"]
+dev = ["pytest>=8.0", "ruff>=0.11"]
+
+[project.urls]
+Homepage = "https://github.com/subzone/knowledge-master"
+Repository = "https://github.com/subzone/knowledge-master"
+Issues = "https://github.com/subzone/knowledge-master/issues"
 
 [project.scripts]
 km = "knowledge_master.cli:app"
 km-server = "knowledge_master.server:main"
 
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["knowledge_master*"]
+
 [tool.ruff]
 line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
