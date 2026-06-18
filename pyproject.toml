@@ -1,0 +1,24 @@
+[project]
+name = "knowledge-master"
+version = "0.1.0"
+description = "Local-first personal RAG knowledge base with FalkorDB graph+vector and MCP server"
+requires-python = ">=3.11"
+dependencies = [
+    "falkordb==1.6.1",
+    "ollama==0.4.8",
+    "mcp==1.9.3",
+    "typer==0.15.4",
+    "gitpython==3.1.44",
+    "rich==14.0.0",
+]
+
+[project.optional-dependencies]
+office = ["python-docx==1.1.2", "openpyxl==3.1.5", "pypdf==5.4.0"]
+dev = ["pytest==8.3.5", "ruff==0.11.12"]
+
+[project.scripts]
+km = "src.cli:app"
+km-server = "src.server:main"
+
+[tool.ruff]
+line-length = 100
