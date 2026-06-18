@@ -5,6 +5,8 @@ import os
 import re
 from pathlib import Path
 
+import yaml
+
 
 def extract_tech_stack(repo_path: str, graph):
     """Detect technologies from dependency files and create Tech nodes + relationships."""
@@ -92,50 +94,40 @@ def extract_services(repo_path: str, graph):
         content = _read(repo_path, compose_file)
         if not content:
             continue
-        # Simple YAML parsing for services (avoid PyYAML dep)
-        in_services = False
-        current_svc = None
-        svc_indent = None
-        for line in content.splitlines():
-            if not line.strip() or line.strip().startswith("#"):
+        try:
+            data = yaml.safe_load(content)
+        except yaml.YAMLError:
+            continue
+        if not isinstance(data, dict) or "services" not in data:
+            continue
+        for svc_name, svc_def in data["services"].items():
+            services.append(svc_name)
+            graph.query(
+                "MERGE (s:Service {name: $name}) SET s.source = 'docker-compose'",
+                params={"name": svc_name},
+            )
+            graph.query(
+                """MATCH (r:Repo {name: $repo}), (s:Service {name: $svc})
+                   MERGE (r)-[:DEFINES_SERVICE]->(s)""",
+                params={"repo": repo_name, "svc": svc_name},
+            )
+            # Extract depends_on
+            if not isinstance(svc_def, dict):
                 continue
-            indent = len(line) - len(line.lstrip())
-            stripped = line.strip()
-            if stripped == "services:":
-                in_services = True
-                svc_indent = indent + 2
+            depends_on = svc_def.get("depends_on")
+            if not depends_on:
                 continue
-            if in_services:
-                if indent <= indent - 2 and stripped and indent == 0 and not stripped.startswith("#"):
-                    break
-                if indent == svc_indent and stripped.endswith(":") and not stripped.startswith("-"):
-                    current_svc = stripped.rstrip(": ")
-                    if not current_svc.startswith('"') and not current_svc.startswith("'"):
-                        services.append(current_svc)
-                        graph.query(
-                            "MERGE (s:Service {name: $name}) SET s.source = 'docker-compose'",
-                            params={"name": current_svc},
-                        )
-                        graph.query(
-                            """MATCH (r:Repo {name: $repo}), (s:Service {name: $svc})
-                               MERGE (r)-[:DEFINES_SERVICE]->(s)""",
-                            params={"repo": repo_name, "svc": current_svc},
-                        )
-                # Detect depends_on
-                if current_svc and "depends_on" in stripped:
-                    pass  # next lines will have deps
-                if current_svc and stripped.startswith("- ") and indent > svc_indent + 2:
-                    dep = stripped.lstrip("- ").strip().rstrip(":")
-                    if dep in services or dep:
-                        graph.query(
-                            "MERGE (s:Service {name: $name})",
-                            params={"name": dep},
-                        )
-                        graph.query(
-                            """MATCH (a:Service {name: $svc}), (b:Service {name: $dep})
-                               MERGE (a)-[:DEPENDS_ON]->(b)""",
-                            params={"svc": current_svc, "dep": dep},
-                        )
+            deps = depends_on if isinstance(depends_on, list) else list(depends_on.keys())
+            for dep in deps:
+                graph.query(
+                    "MERGE (s:Service {name: $name})",
+                    params={"name": dep},
+                )
+                graph.query(
+                    """MATCH (a:Service {name: $svc}), (b:Service {name: $dep})
+                       MERGE (a)-[:DEPENDS_ON]->(b)""",
+                    params={"svc": svc_name, "dep": dep},
+                )
 
     # K8s Deployments/Services
     for yaml_file in Path(repo_path).rglob("*.yaml"):
@@ -230,15 +222,79 @@ def extract_conventions(repo_path: str, graph):
     return conventions
 
 
+def extract_ownership(repo_path: str, graph):
+    """Calculate git blame weighted ownership and store OWNS relationships."""
+    from git import Repo
+    from datetime import datetime, timezone, timedelta
+
+    repo = Repo(repo_path)
+    now = datetime.now(timezone.utc)
+    d30 = now - timedelta(days=30)
+    d90 = now - timedelta(days=90)
+
+    # Get top 50 most recently modified tracked files
+    entries = []
+    for item in repo.head.commit.tree.traverse():
+        if item.type == "blob":
+            entries.append(item.path)
+    # Sort by last commit date
+    file_times = []
+    for fpath in entries:
+        try:
+            commit = next(repo.iter_commits(paths=fpath, max_count=1))
+            file_times.append((fpath, commit.committed_datetime))
+        except StopIteration:
+            pass
+    file_times.sort(key=lambda x: x[1], reverse=True)
+    top_files = [f for f, _ in file_times[:50]]
+
+    results = []
+    for fpath in top_files:
+        try:
+            blame = repo.blame(repo.head.commit, fpath)
+        except Exception:
+            continue
+
+        scores = {}
+        for commit, lines in blame:
+            author = commit.author.name
+            ct = commit.committed_datetime
+            weight = 3 if ct >= d30 else (2 if ct >= d90 else 1)
+            scores[author] = scores.get(author, 0) + len(lines) * weight
+
+        if not scores:
+            continue
+
+        total = sum(scores.values())
+        top_author = max(scores, key=scores.get)
+        ownership = scores[top_author] / total
+
+        graph.query(
+            "MERGE (p:Person {name: $name})",
+            params={"name": top_author},
+        )
+        graph.query(
+            """MATCH (p:Person {name: $author}), (d:Document {path: $path})
+               MERGE (p)-[r:OWNS]->(d)
+               SET r.weight = $weight""",
+            params={"author": top_author, "path": fpath, "weight": round(ownership, 2)},
+        )
+        results.append((fpath, top_author, ownership))
+
+    return results
+
+
 def extract_all(repo_path: str, graph):
     """Run all extraction passes on a repo."""
     techs = extract_tech_stack(repo_path, graph)
     services = extract_services(repo_path, graph)
     conventions = extract_conventions(repo_path, graph)
+    ownership = extract_ownership(repo_path, graph)
     return {
         "techs": len(techs),
         "services": len(services),
         "conventions": len(conventions),
+        "ownership": len(ownership),
     }
 
 

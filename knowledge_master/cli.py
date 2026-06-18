@@ -440,5 +440,25 @@ def serve(port: int = typer.Option(9999, help="Port for web UI")):
     uvicorn.run(create_app(), host="127.0.0.1", port=port)
 
 
+@app.command(name="who-owns")
+def who_owns(file: str = typer.Argument(..., help="File path to check ownership")):
+    """Show who owns a file based on git blame analysis."""
+    graph = store.get_graph()
+    result = graph.query(
+        """MATCH (p:Person)-[r:OWNS]->(d:Document)
+           WHERE d.path CONTAINS $file
+           RETURN p.name, r.weight, d.path
+           ORDER BY r.weight DESC LIMIT 1""",
+        params={"file": file},
+    )
+    if result.result_set:
+        name, weight, path = result.result_set[0]
+        console.print(f"[bold]{path}[/]")
+        console.print(f"  Owner: [green]{name}[/] (weight: {weight:.2f})")
+    else:
+        console.print(f"[yellow]No ownership data for:[/] {file}")
+        console.print("[dim]Run 'km index <repo>' first to extract ownership.[/]")
+
+
 if __name__ == "__main__":
     app()
