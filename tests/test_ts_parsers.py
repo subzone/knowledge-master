@@ -89,7 +89,7 @@ def test_ts_import_resolution():
         (Path(tmp) / "src" / "index.ts").write_text("")
 
         result = resolve_ts_import("./utils", "src/index.ts", tmp)
-        assert result == "src/utils.ts"
+        assert result.replace("\\", "/") == "src/utils.ts"
 
         # External package — should return None
         result = resolve_ts_import("react", "src/index.ts", tmp)

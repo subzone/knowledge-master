@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import os
 
 
 def test_cli_help():
@@ -13,23 +14,22 @@ def test_cli_help():
 
 def test_cli_status_no_db():
     """Invoke status when FalkorDB is unreachable — should handle error gracefully."""
-    # Run a script that patches get_graph to use an unreachable port, then calls status
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
     script = (
-        "from unittest.mock import patch; "
-        "from falkordb import FalkorDB; "
         "import knowledge_master.store as st; "
-        "orig = st.get_graph; "
-        "st.get_graph = lambda **kw: orig(port=19999); "
+        "st._graph_instance = None; "
+        "st.get_graph = lambda **kw: (_ for _ in ()).throw(ConnectionError('test')); "
         "from knowledge_master.cli import app; "
         "from typer.testing import CliRunner; "
         "r = CliRunner().invoke(app, ['status']); "
         "print(r.output); "
-        "assert r.exit_code == 0; "  # command doesn't crash
-        "assert '✗' in r.output or 'error' in r.output.lower() or 'FalkorDB' in r.output"
+        "assert r.exit_code == 0; "
+        "assert 'FalkorDB' in r.output"
     )
     result = subprocess.run(
         [sys.executable, "-c", script],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, timeout=15, env=env,
     )
-    # The script itself should not crash with an unhandled exception
     assert result.returncode == 0, f"Script failed: {result.stderr}"
