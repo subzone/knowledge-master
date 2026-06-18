@@ -284,17 +284,67 @@ def extract_ownership(repo_path: str, graph):
     return results
 
 
+def extract_cross_repo_deps(repo_path: str, graph) -> list[str]:
+    """Check dependency files for packages that match indexed repos, create DEPENDS_ON_REPO edges."""
+    repo_name = Path(repo_path).name
+    pkg_names = set()
+
+    req = _read(repo_path, "requirements.txt")
+    if req:
+        for line in req.splitlines():
+            pkg = re.split(r"[=<>!~\[]", line.strip())[0].strip()
+            if pkg and not pkg.startswith("#"):
+                pkg_names.add(pkg)
+
+    pyproject = _read(repo_path, "pyproject.toml")
+    if pyproject:
+        for m in re.findall(r'"([a-zA-Z0-9_-]+)(?:[=<>!~]|")', pyproject):
+            pkg_names.add(m)
+
+    pkg_json = _read(repo_path, "package.json")
+    if pkg_json:
+        try:
+            data = json.loads(pkg_json)
+            for dep in list(data.get("dependencies", {})) + list(data.get("devDependencies", {})):
+                pkg_names.add(dep)
+        except json.JSONDecodeError:
+            pass
+
+    gomod = _read(repo_path, "go.mod")
+    if gomod:
+        for m in re.findall(r'^\s+([\w./-]+)', gomod, re.MULTILINE):
+            pkg_names.add(m.split("/")[-1])
+
+    cross_deps = []
+    for pkg in pkg_names:
+        r = graph.query(
+            "MATCH (r:Repo) WHERE r.name = $pkg_name RETURN r.name",
+            params={"pkg_name": pkg},
+        )
+        if r.result_set:
+            graph.query(
+                """MATCH (source:Repo {name: $source_repo}), (dep:Repo {name: $dep_repo})
+                   MERGE (source)-[:DEPENDS_ON_REPO]->(dep)""",
+                params={"source_repo": repo_name, "dep_repo": pkg},
+            )
+            cross_deps.append(pkg)
+
+    return cross_deps
+
+
 def extract_all(repo_path: str, graph):
     """Run all extraction passes on a repo."""
     techs = extract_tech_stack(repo_path, graph)
     services = extract_services(repo_path, graph)
     conventions = extract_conventions(repo_path, graph)
     ownership = extract_ownership(repo_path, graph)
+    cross_deps = extract_cross_repo_deps(repo_path, graph)
     return {
         "techs": len(techs),
         "services": len(services),
         "conventions": len(conventions),
         "ownership": len(ownership),
+        "cross_repo_deps": len(cross_deps),
     }
 
 

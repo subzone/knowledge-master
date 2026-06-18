@@ -257,6 +257,18 @@ def _compute_blast_radius(graph, target: str, depth: int = 4) -> list[dict]:
             seen.add(row[1])
             results.append({"type": row[0], "name": row[1], "rel": row[2], "confidence": "possible"})
 
+    # Layer 5: Cross-repo dependencies (repos that depend on the target repo)
+    r = graph.query(
+        """MATCH (dependent:Repo)-[:DEPENDS_ON_REPO]->(target:Repo)
+           WHERE target.name = $name
+           RETURN 'Repo' AS type, dependent.name AS name, 'DEPENDS_ON_REPO' AS rel""",
+        params={"name": target},
+    )
+    for row in (r.result_set or []):
+        if row[1] and row[1] not in seen:
+            seen.add(row[1])
+            results.append({"type": row[0], "name": row[1], "rel": row[2], "confidence": "likely"})
+
     return results
 
 
@@ -460,6 +472,66 @@ def who_owns(file: str = typer.Argument(..., help="File path to check ownership"
         console.print("[dim]Run 'km index <repo>' first to extract ownership.[/]")
 
 
+@app.command(name="safe-to-change")
+def safe_to_change(
+    target: str = typer.Argument(..., help="File or module to assess change risk for"),
+):
+    """Assess risk of changing a target — blast radius + test coverage analysis."""
+    graph = store.get_graph()
+    affected = _compute_blast_radius(graph, target)
+    blast_count = len(affected)
+
+    # Check test coverage
+    test_files = []
+    r = graph.query(
+        """MATCH (d:Document)-[:IMPORTS]->(t:Document)
+           WHERE t.path CONTAINS $name AND d.path CONTAINS 'test'
+           RETURN d.path""",
+        params={"name": target},
+    )
+    for row in (r.result_set or []):
+        if row[0]:
+            test_files.append(row[0])
+
+    # Also check affected entities for test files mentioning target
+    target_stem = Path(target).stem
+    r2 = graph.query(
+        """MATCH (d:Document) WHERE d.path CONTAINS 'test' AND d.path CONTAINS $stem RETURN d.path""",
+        params={"stem": target_stem},
+    )
+    for row in (r2.result_set or []):
+        if row[0] and row[0] not in test_files:
+            test_files.append(row[0])
+
+    has_tests = len(test_files) > 0
+
+    # Compute risk
+    if blast_count > 5 and not has_tests:
+        risk = "dangerous"
+        color = "red"
+    elif blast_count <= 2 and has_tests:
+        risk = "safe"
+        color = "green"
+    else:
+        risk = "risky"
+        color = "yellow"
+
+    # Output
+    tree = Tree(f"[bold {color}]Risk: {risk.upper()}[/] — {target}")
+    tree.add(f"Blast radius: [bold]{blast_count}[/] entities")
+    tree.add(f"Test coverage: {'[green]yes[/]' if has_tests else '[red]no[/]'} ({len(test_files)} test files)")
+    if test_files:
+        tb = tree.add("Test files")
+        for tf in test_files:
+            tb.add(f"[dim]{tf}[/]")
+    if affected:
+        ab = tree.add("Affected entities")
+        for a in affected:
+            ab.add(f"{_icon(a['type'])} {a['name']} [dim]({a['rel']})[/]")
+
+    console.print(tree)
+
+
 @app.command()
 def upgrade():
     """Upgrade graph schema to the latest version."""
@@ -528,6 +600,53 @@ def prune(
         total += empty_count
 
     console.print(f"\n[green]✓ Removed {total} stale nodes[/]")
+
+
+@app.command()
+def watch(path: str = typer.Argument(".", help="Path to watch for changes")):
+    """Watch a directory for file changes and re-index automatically."""
+    from .watcher import watch_directory
+
+    path = str(Path(path).expanduser().resolve())
+    console.print(f"Watching {path} for changes...")
+    watch_directory(path)
+
+
+@app.command()
+def changelog():
+    """Generate CHANGELOG.md from git log, grouped by commit prefix."""
+    import re
+
+    repo_path = PROJECT_DIR
+    result = subprocess.run(
+        ["git", "log", "--oneline", "--format=%h %s", "v0.1.0..HEAD"],
+        capture_output=True, text=True, cwd=repo_path,
+    )
+    if result.returncode != 0:
+        result = subprocess.run(
+            ["git", "log", "--oneline", "--format=%h %s"],
+            capture_output=True, text=True, cwd=repo_path,
+        )
+
+    groups: dict[str, list[str]] = {"feat": [], "fix": [], "docs": [], "release": [], "other": []}
+    for line in result.stdout.strip().splitlines():
+        if not line:
+            continue
+        match = re.match(r"^(\w+)\s+(feat|fix|docs|release):\s*(.+)$", line)
+        if match:
+            sha, prefix, msg = match.groups()
+            groups[prefix].append(f"- {sha} {msg}")
+        else:
+            groups["other"].append(f"- {line}")
+
+    md = "# Changelog\n\n"
+    for section, label in [("feat", "Features"), ("fix", "Fixes"), ("docs", "Documentation"), ("release", "Releases"), ("other", "Other")]:
+        if groups[section]:
+            md += f"## {label}\n\n" + "\n".join(groups[section]) + "\n\n"
+
+    out = repo_path / "CHANGELOG.md"
+    out.write_text(md)
+    console.print(f"[green]✓[/] Written {out}")
 
 
 if __name__ == "__main__":

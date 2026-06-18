@@ -36,13 +36,13 @@
 - [x] Tree-sitter parser tests (TS, Go, Rust)
 - [x] Connector and migration tests
 
-## 🚧 v0.6.0 — Advanced Features (Next)
+## ✅ v0.6.0 — Advanced Features (Released)
 
-- [ ] `km safe-to-change <target>` (blast radius + test coverage = risk score)
-- [ ] Cross-repo dependency resolution (pip/npm packages → linked repos)
-- [ ] Scheduled sync (cron-based re-indexing)
-- [ ] CHANGELOG.md (auto-generated from conventional commits)
-- [ ] Function-level call graph (who calls this function?)
+- [x] `km safe-to-change <target>` (blast radius + test coverage = risk score)
+- [x] Cross-repo dependency resolution (pip/npm packages → linked repos)
+- [x] `km watch` (file watcher with auto re-index on changes)
+- [x] `km changelog` (auto-generated from conventional commits)
+- [x] `who_owns` and `safe_to_change` exposed as MCP tools for AI agents
 
 ## 🔮 v1.0.0 — Stable Release
 

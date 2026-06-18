@@ -80,6 +80,28 @@ async def list_tools() -> list[Tool]:
                 "required": ["path"],
             },
         ),
+        Tool(
+            name="safe_to_change",
+            description="Assess risk of changing a target. Returns risk level, blast radius, and test coverage.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "target": {"type": "string", "description": "File or module to assess"},
+                },
+                "required": ["target"],
+            },
+        ),
+        Tool(
+            name="who_owns",
+            description="Find who owns a file based on OWNS relationships in the graph.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file": {"type": "string", "description": "File path to check ownership"},
+                },
+                "required": ["file"],
+            },
+        ),
     ]
 
 
@@ -160,6 +182,66 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             checks.append({"convention": conv_name, "category": category, "passed": passed})
 
         return [TextContent(type="text", text=json.dumps({"path": path, "checks": checks}, indent=2))]
+
+    elif name == "safe_to_change":
+        from .cli import _compute_blast_radius
+        from pathlib import Path as P
+        target = arguments["target"]
+        affected = _compute_blast_radius(graph, target)
+        blast_count = len(affected)
+
+        test_files = []
+        r = graph.query(
+            """MATCH (d:Document)-[:IMPORTS]->(t:Document)
+               WHERE t.path CONTAINS $name AND d.path CONTAINS 'test'
+               RETURN d.path""",
+            params={"name": target},
+        )
+        for row in (r.result_set or []):
+            if row[0]:
+                test_files.append(row[0])
+        target_stem = P(target).stem
+        r2 = graph.query(
+            """MATCH (d:Document) WHERE d.path CONTAINS 'test' AND d.path CONTAINS $stem RETURN d.path""",
+            params={"stem": target_stem},
+        )
+        for row in (r2.result_set or []):
+            if row[0] and row[0] not in test_files:
+                test_files.append(row[0])
+
+        has_tests = len(test_files) > 0
+        if blast_count > 5 and not has_tests:
+            risk = "dangerous"
+        elif blast_count <= 2 and has_tests:
+            risk = "safe"
+        else:
+            risk = "risky"
+
+        output = {
+            "target": target,
+            "risk": risk,
+            "blast_radius": blast_count,
+            "has_tests": has_tests,
+            "test_files": test_files,
+            "affected": [{"type": a["type"], "name": a["name"]} for a in affected],
+        }
+        return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+    elif name == "who_owns":
+        file = arguments["file"]
+        result = graph.query(
+            """MATCH (p:Person)-[r:OWNS]->(d:Document)
+               WHERE d.path CONTAINS $file
+               RETURN p.name, r.weight, d.path
+               ORDER BY r.weight DESC LIMIT 1""",
+            params={"file": file},
+        )
+        if result.result_set:
+            owner_name, weight, path = result.result_set[0]
+            output = {"file": path, "owner": owner_name, "weight": float(weight)}
+        else:
+            output = {"file": file, "owner": None, "weight": 0.0}
+        return [TextContent(type="text", text=json.dumps(output, indent=2))]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
