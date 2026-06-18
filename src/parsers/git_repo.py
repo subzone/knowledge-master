@@ -1,12 +1,14 @@
 """Git repository parser - indexes files and extracts graph relationships."""
 
 import os
+import sys
 from pathlib import Path
 
 from git import Repo
 from rich.progress import Progress
 
-from . import chunking, embeddings, store
+from .. import chunking, embeddings, store
+from ..intelligence import extract_all
 
 INDEXABLE_EXTENSIONS = {
     ".py", ".ts", ".tsx", ".js", ".rs", ".go", ".java",
@@ -19,7 +21,7 @@ SKIP_DIRS = {".git", "node_modules", "target", "dist", "build", "__pycache__", "
 MAX_FILE_SIZE = 512_000  # 500KB
 
 
-def index_repo(repo_path: str, graph=None, branch: str = "HEAD"):
+def index_repo(repo_path: str, graph=None, branch: str = "HEAD", on_progress=None):
     """Index an entire git repository into the knowledge graph."""
     repo_path = os.path.expanduser(repo_path)
     repo = Repo(repo_path)
@@ -42,18 +44,24 @@ def index_repo(repo_path: str, graph=None, branch: str = "HEAD"):
     # Get tracked files
     tracked = repo.git.ls_files().splitlines()
     indexable = [f for f in tracked if _should_index(f)]
+    total = len(indexable)
 
-    with Progress() as progress:
-        task = progress.add_task(f"Indexing {repo_name}", total=len(indexable))
-        for filepath in indexable:
+    with Progress(disable=not sys.stdout.isatty()) as progress:
+        task = progress.add_task(f"Indexing {repo_name}", total=total)
+        for i, filepath in enumerate(indexable):
             full_path = os.path.join(repo_path, filepath)
             try:
                 _index_file(graph, full_path, filepath, repo_name, repo)
             except Exception as e:
                 progress.console.print(f"  [yellow]skip {filepath}: {e}[/]")
             progress.advance(task)
+            if on_progress:
+                on_progress(i + 1, total, filepath)
 
-    return {"repo": repo_name, "files_indexed": len(indexable)}
+    # Run intelligence extraction
+    intel = extract_all(repo_path, graph)
+
+    return {"repo": repo_name, "files_indexed": total, "intelligence": intel}
 
 
 def _should_index(filepath: str) -> bool:

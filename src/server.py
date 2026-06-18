@@ -58,6 +58,28 @@ async def list_tools() -> list[Tool]:
             description="Get knowledge base statistics: number of chunks, documents, repos indexed.",
             inputSchema={"type": "object", "properties": {}},
         ),
+        Tool(
+            name="blast_radius",
+            description="Show what depends on a target (service, tech, or file). Returns all entities that would be affected by changing the target.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "target": {"type": "string", "description": "Service name, technology, or file to check dependencies for"},
+                },
+                "required": ["target"],
+            },
+        ),
+        Tool(
+            name="check_conventions",
+            description="Check if a repo or path follows the detected coding conventions (naming, structure, patterns). Returns pass/fail for each convention.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to repo or directory to check"},
+                },
+                "required": ["path"],
+            },
+        ),
     ]
 
 
@@ -96,7 +118,66 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         stats = store.get_stats(graph)
         return [TextContent(type="text", text=json.dumps(stats))]
 
+    elif name == "blast_radius":
+        target = arguments["target"]
+        # Try Service
+        result = graph.query(
+            """MATCH (t:Service {name: $name})
+               OPTIONAL MATCH (other)-[*1..3]->(t)
+               WHERE other <> t
+               RETURN labels(other)[0] AS type, other.name AS name, type(last(relationships(path))) AS rel""",
+            params={"name": target},
+        )
+        if not result.result_set or all(r[1] is None for r in result.result_set):
+            # Try Tech
+            result = graph.query(
+                """MATCH (t:Tech {name: $name})
+                   OPTIONAL MATCH (r:Repo)-[:USES_TECH]->(t)
+                   RETURN 'Repo' AS type, r.name AS name, 'USES_TECH' AS rel""",
+                params={"name": target},
+            )
+        affected = [{"type": r[0], "name": r[1], "relationship": r[2]}
+                    for r in (result.result_set or []) if r[1]]
+        output = {"target": target, "affected_count": len(affected), "affected": affected}
+        return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+    elif name == "check_conventions":
+        from pathlib import Path as P
+        path = str(P(arguments["path"]).expanduser().resolve())
+        repo_name = P(path).name
+        result = graph.query(
+            """MATCH (r:Repo)-[:FOLLOWS]->(c:Convention)
+               WHERE r.name = $name
+               RETURN c.name, c.category""",
+            params={"name": repo_name},
+        )
+        if not result.result_set:
+            result = graph.query("MATCH (c:Convention) RETURN c.name, c.category")
+
+        checks = []
+        for conv_name, category in (result.result_set or []):
+            passed = _check_convention_simple(path, conv_name)
+            checks.append({"convention": conv_name, "category": category, "passed": passed})
+
+        return [TextContent(type="text", text=json.dumps({"path": path, "checks": checks}, indent=2))]
+
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
+
+
+def _check_convention_simple(path: str, convention: str) -> bool:
+    """Check a single convention."""
+    from pathlib import Path as P
+    p = P(path)
+    if convention == "src/ directory":
+        return (p / "src").is_dir()
+    elif convention == "separate test directory":
+        return (p / "tests").is_dir() or (p / "test").is_dir()
+    elif convention == "docs/ directory":
+        return (p / "docs").is_dir()
+    elif convention == "snake_case files":
+        files = [f for f in p.rglob("*.py") if ".venv" not in str(f)]
+        return not any("-" in f.stem for f in files)
+    return True
 
 
 async def run():

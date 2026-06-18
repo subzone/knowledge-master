@@ -1,6 +1,7 @@
 """Markdown file/directory parser."""
 
 import os
+import sys
 from pathlib import Path
 
 from rich.progress import Progress
@@ -21,7 +22,7 @@ def index_directory(directory: str, graph=None, patterns: list[str] = None):
     for pattern in patterns:
         files.extend(Path(directory).rglob(pattern))
 
-    with Progress() as progress:
+    with Progress(disable=not sys.stdout.isatty()) as progress:
         task = progress.add_task(f"Indexing {directory}", total=len(files))
         for filepath in files:
             try:

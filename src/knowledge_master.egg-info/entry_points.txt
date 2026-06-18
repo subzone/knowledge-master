@@ -1,3 +1,0 @@
-[console_scripts]
-km = src.cli:app
-km-server = src.server:main

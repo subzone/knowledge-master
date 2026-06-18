@@ -16,7 +16,7 @@ services:
     environment:
       POSTGRES_DB: knowledge_master
       POSTGRES_USER: km
-      POSTGRES_PASSWORD: km_local_dev
+      POSTGRES_PASSWORD: ${KM_PG_PASSWORD:-km_local_dev}
     ports:
       - "5433:5432"
     volumes:
