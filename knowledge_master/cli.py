@@ -329,7 +329,7 @@ def connect(
     if source not in SOURCES:
         console.print(f"[yellow]Unknown source:[/] {source}")
         console.print(f"[dim]Available: {', '.join(SOURCES.keys())}[/]")
-        console.print(f"[dim]Or use --command and --tool for custom MCP servers[/]")
+        console.print("[dim]Or use --command and --tool for custom MCP servers[/]")
         raise typer.Exit(1)
 
     console.print(f"[bold blue]Connecting to {source}...[/]")
