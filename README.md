@@ -221,6 +221,23 @@ python -m knowledge_master.server
 python -m knowledge_master.cli status
 ```
 
+## Security
+
+Knowledge Master runs **entirely on your machine**. No data leaves localhost.
+
+- All ports bound to `127.0.0.1` (not accessible from LAN)
+- Ollama runs locally — no cloud API calls
+- MCP server uses stdio (no network exposure)
+- Optional API key auth for REST endpoints
+
+```bash
+# Enable API key auth
+export KM_API_KEY=$(openssl rand -hex 32)
+km serve
+```
+
+See [SECURITY.md](SECURITY.md) for full security model, risks, and hardening guide.
+
 ## Troubleshooting
 
 | Issue | Fix |

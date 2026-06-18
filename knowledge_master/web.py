@@ -277,6 +277,27 @@ loadGraph();
 def create_app() -> FastAPI:
     app = FastAPI(title="Knowledge Master", docs_url="/docs")
 
+    # API key auth for REST endpoints (optional — set KM_API_KEY env var to enable)
+    import os
+    api_key = os.environ.get("KM_API_KEY")
+    if api_key:
+        from starlette.middleware.base import BaseHTTPMiddleware
+        from starlette.responses import JSONResponse
+
+        class AuthMiddleware(BaseHTTPMiddleware):
+            async def dispatch(self, request, call_next):
+                # Skip auth for web UI pages and static
+                if request.url.path in ("/", "/graph", "/docs", "/openapi.json", "/docs/oauth2-redirect"):
+                    return await call_next(request)
+                # Check API key for /api/ endpoints
+                if request.url.path.startswith("/api/v1/"):
+                    key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
+                    if key != api_key:
+                        return JSONResponse({"error": "Invalid API key"}, status_code=401)
+                return await call_next(request)
+
+        app.add_middleware(AuthMiddleware)
+
     from .api import router as api_router
     app.include_router(api_router)
 
