@@ -108,7 +108,7 @@ def search(
     """Semantic search across the knowledge base."""
     graph = store.get_graph()
     vec = embeddings.embed(query)
-    results = store.graph_context_search(graph, vec, top_k)
+    results = store.graph_context_search(graph, vec, top_k, query=query)
 
     table = Table(title=f"Results for: {query}")
     table.add_column("Score", width=6)

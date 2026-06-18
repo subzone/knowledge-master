@@ -127,8 +127,11 @@ def vector_search(graph, query_embedding: list[float], top_k: int = 10, filters:
     ]
 
 
-def graph_context_search(graph, query_embedding: list[float], top_k: int = 5):
+def graph_context_search(graph, query_embedding: list[float], top_k: int = 5, query: str = None):
     """Hybrid search: vector find + graph traversal for related context."""
+    # Fetch more candidates for re-ranking
+    fetch_k = top_k * 3 if query else top_k
+
     result = graph.query(
         """CALL db.idx.vector.queryNodes('Chunk', 'embedding', $top_k, vecf32($embedding))
            YIELD node AS c, score
@@ -137,9 +140,9 @@ def graph_context_search(graph, query_embedding: list[float], top_k: int = 5):
            RETURN c.text AS text, c.source AS source, score,
                   d.path AS doc_path, r.name AS repo, p.name AS author
            ORDER BY score DESC""",
-        params={"embedding": query_embedding, "top_k": top_k},
+        params={"embedding": query_embedding, "top_k": fetch_k},
     )
-    return [
+    results = [
         {
             "text": r[0],
             "source": r[1],
@@ -150,6 +153,15 @@ def graph_context_search(graph, query_embedding: list[float], top_k: int = 5):
         }
         for r in result.result_set
     ]
+
+    # Apply re-ranking if query text is available
+    if query and results:
+        from .rerank import rerank
+        results = rerank(query, results, top_k)
+    else:
+        results = results[:top_k]
+
+    return results
 
 
 def get_stats(graph):

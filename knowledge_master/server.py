@@ -98,7 +98,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         query_vector = embeddings.embed(query)
 
         if use_graph:
-            results = store.graph_context_search(graph, query_vector, top_k)
+            results = store.graph_context_search(graph, query_vector, top_k, query=query)
         else:
             results = store.vector_search(graph, query_vector, top_k, filters)
 

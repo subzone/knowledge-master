@@ -415,7 +415,7 @@ def create_app() -> FastAPI:
     async def search(query: str = Form(...), top_k: int = Form(10)):
         graph = store.get_graph()
         vec = embeddings.embed(query)
-        results = store.graph_context_search(graph, vec, top_k)
+        results = store.graph_context_search(graph, vec, top_k, query=query)
         if not results:
             return '<div class="msg msg-err">No results found.</div>'
         html = ""

@@ -15,7 +15,7 @@ async def search(q: str, top_k: int = 10, source_type: str = None):
     """Semantic search across the knowledge base."""
     graph = store.get_graph()
     vec = embeddings.embed(q)
-    results = store.graph_context_search(graph, vec, top_k)
+    results = store.graph_context_search(graph, vec, top_k, query=q)
     if source_type:
         results = [r for r in results if r.get("source_type") == source_type]
     return {"query": q, "results": results}
