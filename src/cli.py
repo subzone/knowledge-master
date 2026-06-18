@@ -36,8 +36,14 @@ def start():
 
     # Start containers
     console.print("  [dim]Starting FalkorDB + Postgres...[/]")
-    subprocess.run(["docker", "compose", "-f", str(compose_file), "up", "-d", "--wait"],
-                   capture_output=True, check=True)
+    result = subprocess.run(["docker", "compose", "-f", str(compose_file), "up", "-d"],
+                            capture_output=True, text=True)
+    if result.returncode != 0 and "error" in result.stderr.lower():
+        console.print(f"[red]✗ Docker Compose failed:[/] {result.stderr.strip()}")
+        raise typer.Exit(1)
+    # Wait for healthy
+    subprocess.run(["docker", "compose", "-f", str(compose_file), "up", "--wait"],
+                   capture_output=True)
     console.print("  [green]✓[/] Containers running")
 
     # Check/pull Ollama model
