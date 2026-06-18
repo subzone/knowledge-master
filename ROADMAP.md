@@ -1,43 +1,54 @@
-# Roadmap to v1.0.0
+# Roadmap
 
-## v0.3.0 — Multi-language static analysis
+## ✅ v0.2.0 — Security & Polish (Released)
 
-- [ ] TypeScript/JavaScript import graph (tree-sitter)
-- [ ] Go import graph (tree-sitter)
-- [ ] Rust use/mod graph (tree-sitter)
-- [ ] Function-level call graph (not just file imports)
-- [ ] Cross-file symbol resolution ("who calls validate_token?")
+- [x] Multi-layer blast radius with confidence levels
+- [x] Git blame ownership (recency-weighted)
+- [x] `km who-owns` command
+- [x] `km connect` (MCP connector for email/Slack)
+- [x] REST API with OpenAPI docs
+- [x] Re-ranking for search quality
+- [x] Security hardening (localhost bind, API key auth)
+- [x] 12 unit tests, GitHub Actions CI
+- [x] Documentation site (mkdocs-material)
 
-## v0.4.0 — Reliability & migrations
+## ✅ v0.3.0 — Multi-language Static Analysis (Released)
 
-- [ ] Schema versioning (store version in graph metadata)
-- [ ] `km upgrade` command (migrate graph between versions)
-- [ ] Error recovery for partial indexing (transaction/rollback)
-- [ ] Deduplication (same file indexed from different paths)
-- [ ] Stale data cleanup (TTL or "last seen" tracking)
+- [x] TypeScript/JavaScript import graph (tree-sitter)
+- [x] Go import graph (tree-sitter)
+- [x] Rust use/mod graph (tree-sitter)
+- [x] Unified `build_import_graph_all()` — dispatch by extension
+- [x] Blast radius works cross-language
 
-## v0.5.0 — Platform & testing
+## ✅ v0.4.0 — Reliability & Migrations (Released)
 
-- [ ] Windows CI (GitHub Actions matrix)
-- [ ] Windows path handling fixes
-- [ ] Battle-test on 5+ diverse repos (monorepo, microservices, frontend)
-- [ ] Integration test suite (30+ tests)
-- [ ] Benchmark re-ranker vs raw cosine (precision@5 on test set)
-- [ ] Load test: 10k files, measure indexing time + query latency
+- [x] Schema versioning (stored in graph metadata)
+- [x] `km upgrade` command (auto-migrates between versions)
+- [x] Error recovery (per-file isolation, >50% failure warning)
+- [x] Deduplication via content hash (skips unchanged chunks)
+- [x] `km prune` — remove orphaned/stale data
 
-## v0.6.0 — Advanced features
+## ✅ v0.5.0 — Platform & Testing (Released)
+
+- [x] Windows CI (GitHub Actions matrix)
+- [x] 37 unit tests covering all modules
+- [x] Re-ranker benchmark tests (cosine similarity)
+- [x] Tree-sitter parser tests (TS, Go, Rust)
+- [x] Connector and migration tests
+
+## 🚧 v0.6.0 — Advanced Features (Next)
 
 - [ ] `km safe-to-change <target>` (blast radius + test coverage = risk score)
 - [ ] Cross-repo dependency resolution (pip/npm packages → linked repos)
 - [ ] Scheduled sync (cron-based re-indexing)
-- [ ] Change risk scoring (blast radius breadth × test gaps)
 - [ ] CHANGELOG.md (auto-generated from conventional commits)
+- [ ] Function-level call graph (who calls this function?)
 
-## v1.0.0 — Stable release
+## 🔮 v1.0.0 — Stable Release
 
-- [ ] Stable API (no breaking changes without major version)
-- [ ] Full documentation with examples for all features
+- [ ] Stable API contract (semver guarantees)
 - [ ] Published to MCP registry
 - [ ] Homebrew tap (`brew install knowledge-master`)
-- [ ] VS Code extension (index from IDE)
-- [ ] 50+ tests, >80% coverage on core modules
+- [ ] VS Code extension
+- [ ] 80%+ test coverage on core modules
+- [ ] Battle-tested on 10+ diverse repos
