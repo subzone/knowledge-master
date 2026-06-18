@@ -208,10 +208,13 @@ When you index a repo, Knowledge Master detects:
 pytest
 
 # Lint
-ruff check src/
+ruff check knowledge_master/
 
 # Run MCP server directly
-python -m src.server
+python -m knowledge_master.server
+
+# Run CLI directly
+python -m knowledge_master.cli status
 ```
 
 ## Troubleshooting

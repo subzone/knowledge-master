@@ -57,7 +57,7 @@ def install_git_hook(repo_path: str):
     # Find km executable
     km_bin = Path(sys.executable).parent / "km"
     if not km_bin.exists():
-        km_bin = f"{sys.executable} -m src.cli"
+        km_bin = f"{sys.executable} -m knowledge_master.cli"
 
     hook_content = f"""#!/bin/sh
 # Knowledge Master — auto-index on commit

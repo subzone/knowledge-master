@@ -19,8 +19,8 @@ office = ["python-docx==1.1.2", "openpyxl==3.1.5", "pypdf==5.4.0"]
 dev = ["pytest==8.3.5", "ruff==0.11.12"]
 
 [project.scripts]
-km = "src.cli:app"
-km-server = "src.server:main"
+km = "knowledge_master.cli:app"
+km-server = "knowledge_master.server:main"
 
 [tool.ruff]
 line-length = 100
