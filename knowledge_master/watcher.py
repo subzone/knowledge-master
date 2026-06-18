@@ -1,11 +1,10 @@
 """Incremental indexing — git hook and file watcher support."""
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
-from . import chunking, embeddings, store
+from . import store
 from .parsers.git_repo import _index_file, _should_index, INDEXABLE_EXTENSIONS
 
 from git import Repo

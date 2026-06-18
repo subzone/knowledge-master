@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 
 from . import embeddings, store
@@ -456,7 +456,8 @@ def create_app() -> FastAPI:
     async def index_stream(path: str, type: str = "auto"):
         """SSE endpoint for indexing with progress."""
         from starlette.responses import StreamingResponse
-        import queue, threading
+        import queue
+        import threading
 
         path = str(Path(path).expanduser().resolve())
 

@@ -1,9 +1,7 @@
 """CLI for knowledge-master — simple commands for indexing, searching, and managing."""
 
 import json
-import os
 import subprocess
-import sys
 from pathlib import Path
 
 import typer
@@ -277,20 +275,20 @@ def list_sources():
     graph = store.get_graph()
     stats = store.get_stats(graph)
 
-    console.print(f"\n[bold]Knowledge Base Stats[/]")
+    console.print("\n[bold]Knowledge Base Stats[/]")
     console.print(f"  Chunks:    {stats['chunks']}")
     console.print(f"  Documents: {stats['documents']}")
     console.print(f"  Repos:     {stats['repos']}")
 
     result = graph.query("MATCH (r:Repo) RETURN r.name, r.path")
     if result.result_set:
-        console.print(f"\n[bold]Repos:[/]")
+        console.print("\n[bold]Repos:[/]")
         for name, path in result.result_set:
             console.print(f"  • {name or '(unnamed)'} — {path}")
 
     result = graph.query("MATCH (t:Tech) WHERE t.category = 'language' OR t.category = 'infrastructure' RETURN t.name, t.category")
     if result.result_set:
-        console.print(f"\n[bold]Stack:[/]")
+        console.print("\n[bold]Stack:[/]")
         for name, cat in result.result_set:
             console.print(f"  • {name} ({cat})")
 
