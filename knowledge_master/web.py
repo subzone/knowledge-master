@@ -275,7 +275,10 @@ loadGraph();
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Knowledge Master")
+    app = FastAPI(title="Knowledge Master", docs_url="/docs")
+
+    from .api import router as api_router
+    app.include_router(api_router)
 
     @app.get("/", response_class=HTMLResponse)
     async def home():
