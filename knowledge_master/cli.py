@@ -313,6 +313,33 @@ def remove(source: str = typer.Argument(..., help="Repo name or doc path to remo
         console.print(f"[yellow]Not found:[/] {source}")
 
 
+
+@app.command()
+def connect(
+    source: str = typer.Argument(..., help="Source to pull from: outlook, slack, notion, or custom"),
+    command: str = typer.Option(None, "--command", "-c", help="Custom MCP server command"),
+    tool: str = typer.Option(None, "--tool", "-t", help="Tool name to call on the MCP server"),
+):
+    """Pull and index data from an external MCP server (email, Slack, etc.)."""
+    from .connectors import sync_pull_and_index, add_custom_source, SOURCES
+
+    if command and tool:
+        add_custom_source(source, command.split(), tool)
+
+    if source not in SOURCES:
+        console.print(f"[yellow]Unknown source:[/] {source}")
+        console.print(f"[dim]Available: {', '.join(SOURCES.keys())}[/]")
+        console.print(f"[dim]Or use --command and --tool for custom MCP servers[/]")
+        raise typer.Exit(1)
+
+    console.print(f"[bold blue]Connecting to {source}...[/]")
+    try:
+        result = sync_pull_and_index(source)
+        console.print(f"[green]✓ Done![/] {json.dumps(result)}")
+    except Exception as e:
+        console.print(f"[red]✗ Failed:[/] {e}")
+        raise typer.Exit(1)
+
 @app.command()
 def status():
     """Check system health."""
