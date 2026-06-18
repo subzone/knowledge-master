@@ -9,7 +9,7 @@ from rich.progress import Progress
 
 from .. import chunking, embeddings, store
 from ..intelligence import extract_all
-from ..static_analysis import build_import_graph
+from ..static_analysis import build_import_graph_all
 
 INDEXABLE_EXTENSIONS = {
     ".py", ".ts", ".tsx", ".js", ".rs", ".go", ".java",
@@ -62,8 +62,8 @@ def index_repo(repo_path: str, graph=None, branch: str = "HEAD", on_progress=Non
     # Run intelligence extraction
     intel = extract_all(repo_path, graph)
 
-    # Run static analysis (import graph, symbols)
-    static = build_import_graph(repo_path, graph)
+    # Run static analysis (import graph, symbols) — all languages
+    static = build_import_graph_all(repo_path, graph)
 
     return {"repo": repo_name, "files_indexed": total, "intelligence": intel, "static_analysis": static}
 
