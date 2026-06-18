@@ -16,27 +16,5 @@ services:
       timeout: 3s
       retries: 5
 
-  postgres:
-    image: postgres:16.8-alpine
-    environment:
-      POSTGRES_DB: knowledge_master
-      POSTGRES_USER: km
-      POSTGRES_PASSWORD: ${KM_PG_PASSWORD:-km_local_dev}
-    ports:
-      - "127.0.0.1:5433:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U km"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
 volumes:
   falkor_data:
-  pg_data:

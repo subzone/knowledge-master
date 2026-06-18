@@ -48,7 +48,6 @@ All ports are bound to `127.0.0.1` (localhost only). No service is accessible fr
 | Service | Port | Binding | Auth |
 |---|---|---|---|
 | FalkorDB | 6379 | `127.0.0.1` only | None (Redis protocol) |
-| Postgres | 5433 | `127.0.0.1` only | Password (env var) |
 | Web UI | 9999 | `127.0.0.1` only | Optional API key |
 | Ollama | 11434 | Managed by Ollama | None |
 
@@ -71,7 +70,6 @@ The web UI pages (`/`, `/graph`) remain accessible without auth for local browse
 ### Change Postgres password
 
 ```bash
-export KM_PG_PASSWORD=$(openssl rand -hex 16)
 km start
 ```
 

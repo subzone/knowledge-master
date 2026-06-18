@@ -3,6 +3,10 @@
 **Your codebase's memory.** A local knowledge graph that gives AI agents real understanding of your architecture — not just text search.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue)
+
+> ⚠️ **Alpha software.** Core features work (search, graph, CLI, MCP server) but some capabilities are early-stage. See [Feature Status](#feature-status) below.
 
 ---
 
@@ -192,6 +196,26 @@ When you index a repo, Knowledge Master detects:
 | **Conventions** | File naming (snake_case/kebab-case), folder structure, design patterns |
 | **People** | Git commit authors and file ownership |
 | **Code structure** | Functions, classes, chunked by AST-aware boundaries |
+
+## Feature Status
+
+| Feature | Status | Notes |
+|---|---|---|
+| Semantic search + re-ranking | ✅ Stable | Core retrieval works well |
+| Knowledge graph (FalkorDB) | ✅ Stable | Node/edge storage, vector index |
+| CLI commands | ✅ Stable | All commands functional |
+| MCP server | ✅ Stable | search, blast_radius, check_conventions |
+| Web UI + graph viz | ✅ Stable | htmx + D3, no build step |
+| Git repo indexing | ✅ Stable | Parses code, extracts authors |
+| Tech stack detection | ⚡ Basic | Regex over dependency files — works for common cases |
+| Service topology | ⚡ Basic | docker-compose parsing — limited YAML support |
+| Convention detection | ⚡ Basic | Folder structure + file naming patterns |
+| Blast radius | ⚡ Basic | Graph traversal on stored edges — doesn't trace imports/calls |
+| Email connector (ms-365) | 🧪 Experimental | Works but requires ms-365-mcp setup |
+| Re-ranking | 🧪 Experimental | Novel approach, not benchmarked against cross-encoders |
+| Incremental indexing | 🧪 Experimental | File watcher + git hooks, needs more testing |
+
+**Legend:** ✅ Stable — ⚡ Basic (works, limited scope) — 🧪 Experimental (may change)
 
 ## Comparison
 

@@ -277,7 +277,7 @@ loadGraph();
 def create_app() -> FastAPI:
     app = FastAPI(title="Knowledge Master", docs_url="/docs")
 
-    # API key auth for REST endpoints (optional — set KM_API_KEY env var to enable)
+    # API key auth (optional — set KM_API_KEY env var to enable)
     import os
     api_key = os.environ.get("KM_API_KEY")
     if api_key:
@@ -286,11 +286,11 @@ def create_app() -> FastAPI:
 
         class AuthMiddleware(BaseHTTPMiddleware):
             async def dispatch(self, request, call_next):
-                # Skip auth for web UI pages and static
+                # Allow web UI pages without auth
                 if request.url.path in ("/", "/graph", "/docs", "/openapi.json", "/docs/oauth2-redirect"):
                     return await call_next(request)
-                # Check API key for /api/ endpoints
-                if request.url.path.startswith("/api/v1/"):
+                # All /api/ routes require auth
+                if request.url.path.startswith("/api/"):
                     key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
                     if key != api_key:
                         return JSONResponse({"error": "Invalid API key"}, status_code=401)
@@ -399,10 +399,15 @@ def create_app() -> FastAPI:
 
     @app.get("/api/browse")
     async def browse(path: str = "~"):
-        """Browse local filesystem for selecting folders to index."""
+        """Browse local filesystem for selecting folders to index. Restricted to home directory."""
         target = Path(path).expanduser().resolve()
+        home = Path.home().resolve()
+
+        # Restrict to home directory — prevent filesystem traversal
+        if not str(target).startswith(str(home)):
+            target = home
         if not target.exists() or not target.is_dir():
-            target = Path.home()
+            target = home
 
         items = []
         try:

@@ -17,28 +17,21 @@ class MCPSource:
     source_type: str  # email, slack, docs, etc.
 
 
-# Pre-configured sources
+# Pre-configured sources — commands must be installed separately
 SOURCES = {
     "outlook": MCPSource(
         name="Microsoft 365 Emails",
-        command=["npx", "@anthropic/ms-365-mcp"],
-        tool_name="search_emails",
-        tool_args={"query": "*", "limit": 100},
+        command=["npx", "@subzone81/ms-365-mcp", "--preset", "mail"],
+        tool_name="list-mail-messages",
+        tool_args={"top": 50},
         source_type="email",
     ),
     "slack": MCPSource(
         name="Slack Messages",
-        command=["npx", "@anthropic/slack-mcp"],
-        tool_name="search_messages",
-        tool_args={"query": "", "limit": 100},
-        source_type="slack",
-    ),
-    "notion": MCPSource(
-        name="Notion Pages",
-        command=["npx", "notion-mcp"],
-        tool_name="search_pages",
+        command=["npx", "@modelcontextprotocol/server-slack"],
+        tool_name="slack_search_messages",
         tool_args={"query": ""},
-        source_type="docs",
+        source_type="slack",
     ),
 }
 

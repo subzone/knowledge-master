@@ -25,4 +25,3 @@ All commands support `--help` for detailed usage.
 | Variable | Description | Default |
 |---|---|---|
 | `KM_API_KEY` | API key for REST endpoint auth | None (disabled) |
-| `KM_PG_PASSWORD` | Postgres password | `km_local_dev` |
