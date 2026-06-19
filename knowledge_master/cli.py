@@ -54,8 +54,29 @@ def start():
             subprocess.run(["ollama", "pull", "nomic-embed-text"], check=True)
         console.print("  [green]✓[/] Embedding model ready")
     except FileNotFoundError:
-        console.print("[red]✗ Ollama not found.[/] Install from https://ollama.com")
-        raise typer.Exit(1)
+        import platform
+        console.print("[yellow]Ollama not found.[/]")
+        install = typer.confirm("  Install Ollama automatically?", default=True)
+        if install:
+            system = platform.system()
+            if system == "Darwin":
+                console.print("  [dim]Installing via Homebrew...[/]")
+                subprocess.run(["brew", "install", "ollama"], check=True)
+                subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                import time; time.sleep(3)
+            elif system == "Linux":
+                console.print("  [dim]Installing via official script...[/]")
+                subprocess.run(["sh", "-c", "curl -fsSL https://ollama.com/install.sh | sh"], check=True)
+            else:
+                console.print("[red]✗ Auto-install not supported on Windows.[/]")
+                console.print("  Download from: https://ollama.com/download")
+                raise typer.Exit(1)
+            console.print("  [dim]Pulling nomic-embed-text...[/]")
+            subprocess.run(["ollama", "pull", "nomic-embed-text"], check=True)
+            console.print("  [green]✓[/] Ollama installed + model ready")
+        else:
+            console.print("  Install manually: https://ollama.com")
+            raise typer.Exit(1)
 
     # Init schema
     graph = store.get_graph()
