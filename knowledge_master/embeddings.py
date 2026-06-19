@@ -1,12 +1,16 @@
 """Embedding client using Ollama local models."""
 
+import os
+
 from ollama import Client
 
-MODEL = "nomic-embed-text"
-TIMEOUT = 30  # seconds
+MODEL = os.environ.get("KM_EMBED_MODEL", "nomic-embed-text")
+TIMEOUT = 30
 
-# Create client with timeout
-_client = Client(timeout=TIMEOUT)
+_client = Client(
+    host=os.environ.get("KM_OLLAMA_HOST", "http://localhost:11434"),
+    timeout=TIMEOUT,
+)
 
 
 def embed(text: str) -> list[float]:

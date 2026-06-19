@@ -12,11 +12,15 @@ VECTOR_DIM = 768
 _graph_instance = None
 
 
-def get_graph(host: str = "localhost", port: int = 6379):
+def get_graph(host: str = None, port: int = None):
     """Get FalkorDB graph instance with schema version check."""
     global _graph_instance
     if _graph_instance is not None:
         return _graph_instance
+
+    import os
+    host = host or os.environ.get("KM_FALKORDB_HOST", "localhost")
+    port = port or int(os.environ.get("KM_FALKORDB_PORT", "6379"))
 
     db = FalkorDB(host=host, port=port)
     graph = db.select_graph(GRAPH_NAME)
