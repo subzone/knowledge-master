@@ -74,7 +74,8 @@ def start():
                 console.print("  [dim]Installing via Homebrew...[/]")
                 subprocess.run(["brew", "install", "ollama"], check=True)
                 subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                import time; time.sleep(3)
+                import time
+                time.sleep(3)
             elif system == "Linux":
                 console.print("  [dim]Installing via official script...[/]")
                 subprocess.run(["sh", "-c", "curl -fsSL https://ollama.com/install.sh | sh"], check=True)
