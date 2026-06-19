@@ -90,6 +90,8 @@ LANGUAGE_MAP = {
     ".rs": "rust",
     ".go": "go",
     ".java": "java",
+    ".cs": "csharp",
+    ".tf": "terraform",
     ".md": "markdown",
     ".markdown": "markdown",
 }

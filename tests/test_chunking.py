@@ -27,3 +27,23 @@ def test_chunk_id_deterministic():
     id3 = chunking.chunk_id("file.py", 1)
     assert id1 == id2
     assert id1 != id3
+
+
+def test_chunk_file_empty_input():
+    """Empty input should return empty list."""
+    chunks = chunking.chunk_file("", ".py")
+    assert chunks == []
+
+
+def test_chunk_file_very_long():
+    """Very long file should still produce chunks."""
+    text = "def fn_{i}():\n    pass\n\n".replace("{i}", "x") * 500
+    chunks = chunking.chunk_file(text, ".py")
+    assert len(chunks) >= 1
+
+
+def test_chunk_file_unknown_extension():
+    """Unknown extension falls back to text chunking."""
+    text = "Some content\n\nAnother paragraph"
+    chunks = chunking.chunk_file(text, ".xyz")
+    assert len(chunks) >= 1

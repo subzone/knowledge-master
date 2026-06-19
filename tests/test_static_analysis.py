@@ -46,3 +46,14 @@ def test_resolve_import(tmp_path):
     resolved = resolve_import("b", level=1, source_file="pkg/a.py", repo_root=str(tmp_path))
     assert resolved is not None
     assert resolved.endswith("b.py")
+
+
+def test_extract_python_graph_syntax_error(tmp_path):
+    """Syntax errors should not crash the extractor."""
+    code = "def broken(\n    return ===\n"
+    f = tmp_path / "bad.py"
+    f.write_text(code)
+    result = extract_python_graph(str(f))
+    # Should return a result dict without crashing
+    assert isinstance(result, dict)
+    assert result["path"] == str(f)

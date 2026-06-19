@@ -22,3 +22,10 @@ def test_content_hash_length():
 def test_content_hash_hex():
     h = content_hash("test")
     assert all(c in "0123456789abcdef" for c in h)
+
+
+def test_content_hash_empty_string():
+    """Empty string should still produce a valid hash."""
+    h = content_hash("")
+    assert len(h) == 16
+    assert all(c in "0123456789abcdef" for c in h)

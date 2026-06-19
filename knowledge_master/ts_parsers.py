@@ -8,6 +8,8 @@ import tree_sitter_typescript as ts_ts
 import tree_sitter_go as ts_go
 import tree_sitter_rust as ts_rust
 import tree_sitter_javascript as ts_js
+import tree_sitter_java as ts_java
+import tree_sitter_c_sharp as ts_cs
 
 # Initialize languages
 TYPESCRIPT = Language(ts_ts.language_typescript())
@@ -190,3 +192,137 @@ def _walk(node):
     yield node
     for child in node.children:
         yield from _walk(child)
+
+
+# --- Java, C#, Terraform, Helm ---
+
+JAVA = Language(ts_java.language())
+CSHARP = Language(ts_cs.language())
+
+
+def extract_java_graph(file_path: str) -> dict:
+    """Extract imports and public class/method exports from a Java file."""
+    source = Path(file_path).read_bytes()
+    parser = Parser(JAVA)
+    tree = parser.parse(source)
+
+    imports = []
+    exports = []
+
+    for node in _walk(tree.root_node):
+        if node.type == "import_declaration":
+            # import java.util.List;
+            for child in node.children:
+                if child.type == "scoped_identifier":
+                    imports.append({"module": child.text.decode(), "names": []})
+                    break
+
+        elif node.type == "class_declaration":
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                exports.append({"name": name_node.text.decode(), "type": "class", "line": node.start_point[0] + 1})
+
+        elif node.type == "method_declaration":
+            mods = [c.text.decode() for c in node.children if c.type == "modifiers"]
+            if any("public" in m for m in mods):
+                name_node = node.child_by_field_name("name")
+                if name_node:
+                    exports.append({"name": name_node.text.decode(), "type": "method", "line": node.start_point[0] + 1})
+
+    return {"imports": imports, "exports": exports, "path": file_path}
+
+
+def extract_csharp_graph(file_path: str) -> dict:
+    """Extract using directives and public class/method exports from a C# file."""
+    source = Path(file_path).read_bytes()
+    parser = Parser(CSHARP)
+    tree = parser.parse(source)
+
+    imports = []
+    exports = []
+
+    for node in _walk(tree.root_node):
+        if node.type == "using_directive":
+            # using System.Collections.Generic;
+            for child in node.children:
+                if child.type in ("qualified_name", "identifier"):
+                    imports.append({"module": child.text.decode(), "names": []})
+                    break
+
+        elif node.type == "class_declaration":
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                exports.append({"name": name_node.text.decode(), "type": "class", "line": node.start_point[0] + 1})
+
+        elif node.type == "method_declaration":
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                # Check if public
+                mods = [c for c in node.children if c.type == "modifier"]
+                if any(m.text == b"public" for m in mods):
+                    exports.append({"name": name_node.text.decode(), "type": "method", "line": node.start_point[0] + 1})
+
+    return {"imports": imports, "exports": exports, "path": file_path}
+
+
+def extract_terraform_graph(file_path: str) -> dict:
+    """Extract module sources, resource references, and variable deps from Terraform .tf files."""
+    source = Path(file_path).read_text(errors="ignore")
+    imports = []
+    exports = []
+
+    import re
+    # module "name" { source = "./modules/vpc" }
+    for m in re.finditer(r'module\s+"(\w+)"\s*\{[^}]*source\s*=\s*"([^"]+)"', source, re.DOTALL):
+        imports.append({"module": m.group(2), "names": [m.group(1)], "type": "module"})
+
+    # resource "aws_instance" "web" { ... }
+    for m in re.finditer(r'resource\s+"(\w+)"\s+"(\w+)"', source):
+        exports.append({"name": f"{m.group(1)}.{m.group(2)}", "type": "resource", "line": source[:m.start()].count('\n') + 1})
+
+    # data "aws_ami" "latest" { ... }
+    for m in re.finditer(r'data\s+"(\w+)"\s+"(\w+)"', source):
+        exports.append({"name": f"data.{m.group(1)}.{m.group(2)}", "type": "data", "line": source[:m.start()].count('\n') + 1})
+
+    # variable "name" { ... }
+    for m in re.finditer(r'variable\s+"(\w+)"', source):
+        exports.append({"name": f"var.{m.group(1)}", "type": "variable", "line": source[:m.start()].count('\n') + 1})
+
+    # output "name" { ... }
+    for m in re.finditer(r'output\s+"(\w+)"', source):
+        exports.append({"name": f"output.{m.group(1)}", "type": "output", "line": source[:m.start()].count('\n') + 1})
+
+    return {"imports": imports, "exports": exports, "path": file_path}
+
+
+def extract_helm_graph(chart_dir: str) -> dict:
+    """Extract Helm chart dependencies and values references."""
+    imports = []
+    exports = []
+    chart_dir = Path(chart_dir)
+
+    # Chart.yaml — subchart dependencies
+    chart_yaml = chart_dir / "Chart.yaml"
+    if chart_yaml.exists():
+        import yaml
+        try:
+            chart = yaml.safe_load(chart_yaml.read_text())
+            for dep in chart.get("dependencies", []):
+                imports.append({"module": dep.get("name", ""), "names": [], "type": "subchart",
+                               "repository": dep.get("repository", "")})
+            exports.append({"name": chart.get("name", ""), "type": "chart", "line": 1})
+        except Exception:
+            pass
+
+    # values.yaml — exported config surface
+    values_yaml = chart_dir / "values.yaml"
+    if values_yaml.exists():
+        import yaml
+        try:
+            values = yaml.safe_load(values_yaml.read_text()) or {}
+            for key in values:
+                exports.append({"name": f"values.{key}", "type": "value", "line": 1})
+        except Exception:
+            pass
+
+    return {"imports": imports, "exports": exports, "path": str(chart_dir)}

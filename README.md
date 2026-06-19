@@ -203,19 +203,22 @@ When you index a repo, Knowledge Master detects:
 
 | Feature | Status | Notes |
 |---|---|---|
-| Semantic search + re-ranking | ✅ Stable | Core retrieval works well |
-| Knowledge graph (FalkorDB) | ✅ Stable | Node/edge storage, vector index |
-| CLI commands | ✅ Stable | All commands functional |
-| MCP server | ✅ Stable | search, blast_radius, check_conventions |
-| Web UI + graph viz | ✅ Stable | htmx + D3, no build step |
-| Git repo indexing | ✅ Stable | Parses code, extracts authors |
-| Tech stack detection | ⚡ Basic | Regex over dependency files — works for common cases |
-| Service topology | ⚡ Basic | docker-compose parsing — limited YAML support |
+| Semantic search + re-ranking | ✅ Stable | Two-pass retrieval with confidence scoring |
+| Knowledge graph (FalkorDB) | ✅ Stable | Nodes, edges, vector index, schema versioning |
+| CLI (14 commands) | ✅ Stable | start, index, search, blast-radius, safe-to-change, who-owns, etc. |
+| MCP server (8 tools) | ✅ Stable | search, blast_radius, safe_to_change, who_owns, check_conventions, index, status |
+| REST API | ✅ Stable | /api/v1/ with OpenAPI docs |
+| Web UI + graph viz | ✅ Stable | htmx + D3, search, file browser, graph |
+| Git repo indexing | ✅ Stable | Parses code, extracts authors, detects tech stack |
+| Multi-language static analysis | ✅ Stable | Python (ast), TypeScript, Go, Rust (tree-sitter) |
+| Blast radius (multi-layer) | ✅ Stable | Imports → services → people, confidence levels |
+| `safe-to-change` risk assessment | ✅ Stable | Blast radius + test coverage = risk score |
+| Git blame ownership | ✅ Stable | Recency-weighted (3x/2x/1x) |
+| Schema migrations | ✅ Stable | Auto-migrate, km upgrade |
+| Deduplication | ✅ Stable | Content hash, skips unchanged |
 | Convention detection | ⚡ Basic | Folder structure + file naming patterns |
-| Blast radius | ⚡ Basic | Graph traversal on stored edges — doesn't trace imports/calls |
-| Email connector (ms-365) | 🧪 Experimental | Works but requires ms-365-mcp setup |
-| Re-ranking | 🧪 Experimental | Novel approach, not benchmarked against cross-encoders |
-| Incremental indexing | 🧪 Experimental | File watcher + git hooks, needs more testing |
+| Email connector (ms-365) | 🧪 Experimental | Works, requires external MCP setup |
+| `km watch` | 🧪 Experimental | Polling-based, may change |
 
 **Legend:** ✅ Stable — ⚡ Basic (works, limited scope) — 🧪 Experimental (may change)
 

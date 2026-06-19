@@ -69,6 +69,15 @@ def extract_tech_stack(repo_path: str, graph):
     if any(Path(repo_path).rglob("*.tf")):
         techs.add(("Terraform", "infrastructure"))
 
+    # .NET / C#
+    if any(Path(repo_path).rglob("*.csproj")) or any(Path(repo_path).rglob("*.sln")):
+        techs.add(("C#", "language"))
+        techs.add((".NET", "framework"))
+
+    # Helm
+    if (Path(repo_path) / "Chart.yaml").exists() or any(Path(repo_path).rglob("Chart.yaml")):
+        techs.add(("Helm", "infrastructure"))
+
     # Store in graph
     for name, category in techs:
         graph.query(

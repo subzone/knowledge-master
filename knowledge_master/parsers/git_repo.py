@@ -12,7 +12,8 @@ from ..intelligence import extract_all
 from ..static_analysis import build_import_graph_all
 
 INDEXABLE_EXTENSIONS = {
-    ".py", ".ts", ".tsx", ".js", ".rs", ".go", ".java",
+    ".py", ".ts", ".tsx", ".js", ".rs", ".go", ".java", ".cs",
+    ".tf", ".tfvars", ".hcl",
     ".md", ".markdown", ".txt", ".yaml", ".yml", ".json",
     ".toml", ".cfg", ".ini", ".sh", ".bash", ".dockerfile",
 }

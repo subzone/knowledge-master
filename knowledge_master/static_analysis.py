@@ -144,7 +144,7 @@ def _node_name(node) -> str:
 def build_import_graph_all(repo_path: str, graph):
     """Build import graph for all supported languages in the repo."""
     repo_path = str(Path(repo_path).resolve())
-    results = {"python": {}, "typescript": {}, "go": {}, "rust": {}}
+    results = {"python": {}, "typescript": {}, "go": {}, "rust": {}, "java": {}, "csharp": {}, "terraform": {}}
 
     # Python (AST-based)
     results["python"] = build_import_graph(repo_path, graph)
@@ -157,6 +157,15 @@ def build_import_graph_all(repo_path: str, graph):
 
     # Rust (tree-sitter)
     results["rust"] = _build_rust_import_graph(repo_path, graph)
+
+    # Java (tree-sitter)
+    results["java"] = _build_java_import_graph(repo_path, graph)
+
+    # C# (tree-sitter)
+    results["csharp"] = _build_csharp_import_graph(repo_path, graph)
+
+    # Terraform (regex-based HCL)
+    results["terraform"] = _build_terraform_graph(repo_path, graph)
 
     total_edges = sum(r.get("import_edges", 0) for r in results.values())
     total_symbols = sum(r.get("symbols", 0) for r in results.values())
@@ -304,3 +313,99 @@ def _build_rust_import_graph(repo_path: str, graph) -> dict:
                         break
 
     return {"files_analyzed": len(rs_files), "import_edges": edges, "symbols": symbols}
+
+
+def _build_java_import_graph(repo_path: str, graph) -> dict:
+    """Build import graph for Java files."""
+    from .ts_parsers import extract_java_graph
+
+    skip = {".git", "node_modules", "target", "build", ".gradle"}
+    java_files = [f for f in Path(repo_path).rglob("*.java") if not any(p in f.parts for p in skip)]
+
+    if not java_files:
+        return {"files_analyzed": 0, "import_edges": 0, "symbols": 0}
+
+    symbols = 0
+    for java_file in java_files:
+        relative = os.path.relpath(str(java_file), repo_path)
+        try:
+            result = extract_java_graph(str(java_file))
+        except Exception:
+            continue
+        for export in result["exports"]:
+            graph.query(
+                "MERGE (f:Function {name: $name, file: $file}) SET f.line = $line, f.lang = 'java'",
+                params={"name": export["name"], "file": relative, "line": export.get("line", 0)},
+            )
+            symbols += 1
+
+    return {"files_analyzed": len(java_files), "import_edges": 0, "symbols": symbols}
+
+
+def _build_csharp_import_graph(repo_path: str, graph) -> dict:
+    """Build import graph for C# files."""
+    from .ts_parsers import extract_csharp_graph
+
+    skip = {".git", "node_modules", "bin", "obj", "packages"}
+    cs_files = [f for f in Path(repo_path).rglob("*.cs") if not any(p in f.parts for p in skip)]
+
+    if not cs_files:
+        return {"files_analyzed": 0, "import_edges": 0, "symbols": 0}
+
+    symbols = 0
+    for cs_file in cs_files:
+        relative = os.path.relpath(str(cs_file), repo_path)
+        try:
+            result = extract_csharp_graph(str(cs_file))
+        except Exception:
+            continue
+        for export in result["exports"]:
+            graph.query(
+                "MERGE (f:Function {name: $name, file: $file}) SET f.line = $line, f.lang = 'csharp'",
+                params={"name": export["name"], "file": relative, "line": export.get("line", 0)},
+            )
+            symbols += 1
+
+    return {"files_analyzed": len(cs_files), "import_edges": 0, "symbols": symbols}
+
+
+def _build_terraform_graph(repo_path: str, graph) -> dict:
+    """Build module dependency graph for Terraform files."""
+    from .ts_parsers import extract_terraform_graph
+
+    skip = {".git", ".terraform", "node_modules"}
+    tf_files = [f for f in Path(repo_path).rglob("*.tf") if not any(p in f.parts for p in skip)]
+
+    if not tf_files:
+        return {"files_analyzed": 0, "import_edges": 0, "symbols": 0}
+
+    edges = 0
+    symbols = 0
+    for tf_file in tf_files:
+        relative = os.path.relpath(str(tf_file), repo_path)
+        try:
+            result = extract_terraform_graph(str(tf_file))
+        except Exception:
+            continue
+
+        for export in result["exports"]:
+            graph.query(
+                "MERGE (f:Function {name: $name, file: $file}) SET f.line = $line, f.lang = 'terraform'",
+                params={"name": export["name"], "file": relative, "line": export.get("line", 0)},
+            )
+            symbols += 1
+
+        # Module source → file edge (if local path)
+        for imp in result["imports"]:
+            module_source = imp["module"]
+            if module_source.startswith("./") or module_source.startswith("../"):
+                target_dir = os.path.normpath(os.path.join(os.path.dirname(relative), module_source))
+                graph.query(
+                    """MERGE (src:Document {path: $src})
+                       MERGE (dst:Document {path: $dst})
+                       MERGE (src)-[:IMPORTS {names: $names, lang: 'terraform'}]->(dst)""",
+                    params={"src": relative, "dst": target_dir, "names": imp.get("names", [])},
+                )
+                edges += 1
+
+    return {"files_analyzed": len(tf_files), "import_edges": edges, "symbols": symbols}

@@ -1,0 +1,46 @@
+{
+  "name": "knowledge-master",
+  "description": "Local-first knowledge graph for developers. Semantic search, blast radius analysis, convention enforcement, and file ownership — all via MCP.",
+  "homepage": "https://github.com/subzone/knowledge-master",
+  "is_official": false,
+  "source": {
+    "type": "pip",
+    "package": "knowledge-master",
+    "command": "km-server"
+  },
+  "tools": [
+    {
+      "name": "search",
+      "description": "Semantic search across indexed code, docs, and emails with graph context (author, repo, relationships)"
+    },
+    {
+      "name": "blast_radius",
+      "description": "Multi-layer dependency analysis — shows what breaks if you change a file, function, service, or technology"
+    },
+    {
+      "name": "safe_to_change",
+      "description": "Risk assessment combining blast radius + test coverage. Returns safe/risky/dangerous with affected entities"
+    },
+    {
+      "name": "who_owns",
+      "description": "File ownership from git blame weighted by recency (recent changes count more)"
+    },
+    {
+      "name": "check_conventions",
+      "description": "Verify code follows detected team conventions (naming, structure, patterns)"
+    },
+    {
+      "name": "index_repo",
+      "description": "Index a git repository into the knowledge graph"
+    },
+    {
+      "name": "index_directory",
+      "description": "Index a directory of documents"
+    },
+    {
+      "name": "get_status",
+      "description": "Knowledge base statistics (chunks, documents, repos)"
+    }
+  ],
+  "tags": ["knowledge-graph", "rag", "code-analysis", "developer-tools", "local-first"]
+}
