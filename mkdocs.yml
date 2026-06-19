@@ -32,6 +32,7 @@ nav:
     - REST API: reference/api.md
     - Performance: reference/performance.md
     - Security: reference/security.md
+    - FAQ: FAQ.md
   - Integrations:
     - Claude Desktop: integrations/claude-desktop.md
     - Cursor: integrations/cursor.md
