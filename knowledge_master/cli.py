@@ -38,6 +38,9 @@ def start():
     check = subprocess.run(["docker", "ps", "--filter", "name=km-falkordb", "--format", "{{.Names}}"],
                            capture_output=True, text=True)
     if "km-falkordb" not in check.stdout:
+        # Pull image first (docker run with capture_output hides pull errors)
+        console.print("  [dim]Pulling FalkorDB image...[/]")
+        subprocess.run(["docker", "pull", "falkordb/falkordb:v4.4.1"], capture_output=True)
         subprocess.run([
             "docker", "run", "-d", "--name", "km-falkordb",
             "-p", "127.0.0.1:6379:6379",
