@@ -17,17 +17,17 @@ class MCPSource:
     source_type: str  # email, slack, docs, etc.
 
 
-# Pre-configured sources — commands must be installed separately
+# Pre-configured sources — require external MCP servers to be installed and authenticated
 SOURCES = {
     "outlook": MCPSource(
-        name="Microsoft 365 Emails",
+        name="Microsoft 365 Emails (requires: npx @subzone81/ms-365-mcp)",
         command=["npx", "@subzone81/ms-365-mcp", "--preset", "mail"],
         tool_name="list-mail-messages",
         tool_args={"top": 50},
         source_type="email",
     ),
     "slack": MCPSource(
-        name="Slack Messages",
+        name="Slack Messages (requires: npx @modelcontextprotocol/server-slack)",
         command=["npx", "@modelcontextprotocol/server-slack"],
         tool_name="slack_search_messages",
         tool_args={"query": ""},

@@ -34,7 +34,7 @@ def start():
         raise typer.Exit(1)
 
     # Start containers
-    console.print("  [dim]Starting FalkorDB + Postgres...[/]")
+    console.print("  [dim]Starting FalkorDB...[/]")
     result = subprocess.run(["docker", "compose", "-f", str(compose_file), "up", "-d"],
                             capture_output=True, text=True)
     if result.returncode != 0 and "error" in result.stderr.lower():

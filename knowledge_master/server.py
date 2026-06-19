@@ -142,25 +142,15 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
     elif name == "blast_radius":
         target = arguments["target"]
-        # Try Service
-        result = graph.query(
-            """MATCH (t:Service {name: $name})
-               OPTIONAL MATCH (other)-[*1..3]->(t)
-               WHERE other <> t
-               RETURN labels(other)[0] AS type, other.name AS name, type(last(relationships(path))) AS rel""",
-            params={"name": target},
-        )
-        if not result.result_set or all(r[1] is None for r in result.result_set):
-            # Try Tech
-            result = graph.query(
-                """MATCH (t:Tech {name: $name})
-                   OPTIONAL MATCH (r:Repo)-[:USES_TECH]->(t)
-                   RETURN 'Repo' AS type, r.name AS name, 'USES_TECH' AS rel""",
-                params={"name": target},
-            )
-        affected = [{"type": r[0], "name": r[1], "relationship": r[2]}
-                    for r in (result.result_set or []) if r[1]]
-        output = {"target": target, "affected_count": len(affected), "affected": affected}
+        from .cli import _compute_blast_radius
+        results = _compute_blast_radius(graph, target)
+        output = {
+            "target": target,
+            "affected_count": len(results),
+            "definite": [r for r in results if r["confidence"] == "definite"],
+            "likely": [r for r in results if r["confidence"] == "likely"],
+            "possible": [r for r in results if r["confidence"] == "possible"],
+        }
         return [TextContent(type="text", text=json.dumps(output, indent=2))]
 
     elif name == "check_conventions":
