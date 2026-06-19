@@ -649,5 +649,99 @@ def changelog():
     console.print(f"[green]✓[/] Written {out}")
 
 
+@app.command()
+def setup(
+    tool: str = typer.Argument(
+        None,
+        help="AI tool to configure: claude, cursor, kiro, copilot, amazonq, antigravity (or 'all')",
+    ),
+):
+    """Auto-configure Knowledge Master MCP server for your AI tools."""
+    import shutil
+
+    # Find km-server path
+    km_server_path = shutil.which("km-server")
+    if not km_server_path:
+        # Fall back to venv path
+        venv_bin = Path(sys.executable).parent / "km-server"
+        if venv_bin.exists():
+            km_server_path = str(venv_bin)
+        else:
+            console.print("[red]✗ km-server not found on PATH.[/]")
+            console.print("[dim]Run: pip install knowledge-master[/]")
+            raise typer.Exit(1)
+
+    configs = {
+        "claude": {
+            "path": Path.home() / "Library/Application Support/Claude/claude_desktop_config.json",
+            "alt_path": Path.home() / ".config/claude/claude_desktop_config.json",
+            "key": "mcpServers",
+        },
+        "cursor": {
+            "path": Path.home() / ".cursor/mcp.json",
+            "key": "mcpServers",
+        },
+        "kiro": {
+            "path": Path.home() / ".kiro/settings/mcp.json",
+            "key": "mcpServers",
+        },
+        "copilot": {
+            "path": Path.home() / ".vscode/mcp.json",
+            "key": "servers",
+        },
+        "amazonq": {
+            "path": Path.home() / ".aws/amazonq/agents/default.json",
+            "key": "mcpServers",
+        },
+        "antigravity": {
+            "path": Path.home() / ".config/antigravity/mcp.json",
+            "key": "mcpServers",
+        },
+    }
+
+    if tool is None:
+        console.print("[bold]Available tools:[/]")
+        for name in configs:
+            console.print(f"  • {name}")
+        console.print("\n[dim]Usage: km setup <tool>  or  km setup all[/]")
+        console.print(f"[dim]km-server path: {km_server_path}[/]")
+        return
+
+    targets = list(configs.keys()) if tool == "all" else [tool]
+
+    for t in targets:
+        if t not in configs:
+            console.print(f"[yellow]Unknown tool: {t}[/]")
+            continue
+
+        cfg = configs[t]
+        config_path = cfg["path"]
+        if not config_path.exists() and "alt_path" in cfg:
+            config_path = cfg["alt_path"]
+
+        # Read or create config
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        if config_path.exists():
+            try:
+                existing = json.loads(config_path.read_text())
+            except (json.JSONDecodeError, ValueError):
+                existing = {}
+        else:
+            existing = {}
+
+        # Add knowledge-master MCP server
+        key = cfg["key"]
+        if key not in existing:
+            existing[key] = {}
+
+        existing[key]["knowledge-master"] = {"command": km_server_path}
+
+        config_path.write_text(json.dumps(existing, indent=2))
+        console.print(f"  [green]✓[/] {t}: {config_path}")
+
+    console.print("\n[bold green]Done![/] Restart your AI tool to activate Knowledge Master.")
+    console.print(f"[dim]km-server: {km_server_path}[/]")
+
+
 if __name__ == "__main__":
     app()
