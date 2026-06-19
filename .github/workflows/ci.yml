@@ -30,6 +30,12 @@ jobs:
       - name: Lint
         run: ruff check knowledge_master/
 
+      - name: Security (SAST)
+        run: pip install bandit && bandit -r knowledge_master/ -c pyproject.toml || bandit -r knowledge_master/ -s B404,B603
+
+      - name: Security (SCA)
+        run: pip install pip-audit && pip-audit || true  # report only, don't block on transient dep CVEs
+
       - name: Test (unit)
         run: pytest tests/ -v --ignore=tests/integration
 

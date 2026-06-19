@@ -6,7 +6,7 @@ import re
 
 def chunk_id(source: str, index: int) -> str:
     """Deterministic chunk ID from source path and position."""
-    return hashlib.md5(f"{source}:{index}".encode()).hexdigest()
+    return hashlib.md5(f"{source}:{index}".encode()).hexdigest()  # nosec B324 - not used for security
 
 
 def chunk_markdown(text: str, max_tokens: int = 512) -> list[dict]:
