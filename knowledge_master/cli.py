@@ -22,7 +22,6 @@ PROJECT_DIR = Path(__file__).parent.parent
 @app.command()
 def start():
     """Start Knowledge Master (Docker containers + Ollama model)."""
-    compose_file = PROJECT_DIR / "docker-compose.yml"
 
     console.print("[bold]Starting Knowledge Master...[/]\n")
 
@@ -33,17 +32,29 @@ def start():
         console.print("[red]✗ Docker is not running.[/] Please start Docker first.")
         raise typer.Exit(1)
 
-    # Start containers
+    # Start FalkorDB container
     console.print("  [dim]Starting FalkorDB...[/]")
-    result = subprocess.run(["docker", "compose", "-f", str(compose_file), "up", "-d"],
-                            capture_output=True, text=True)
-    if result.returncode != 0 and "error" in result.stderr.lower():
-        console.print(f"[red]✗ Docker Compose failed:[/] {result.stderr.strip()}")
-        raise typer.Exit(1)
-    # Wait for healthy
-    subprocess.run(["docker", "compose", "-f", str(compose_file), "up", "--wait"],
-                   capture_output=True)
-    console.print("  [green]✓[/] Containers running")
+    # Check if already running
+    check = subprocess.run(["docker", "ps", "--filter", "name=km-falkordb", "--format", "{{.Names}}"],
+                           capture_output=True, text=True)
+    if "km-falkordb" not in check.stdout:
+        subprocess.run([
+            "docker", "run", "-d", "--name", "km-falkordb",
+            "-p", "127.0.0.1:6379:6379",
+            "--restart", "unless-stopped",
+            "-v", "km-falkordb-data:/data",
+            "--memory", "512m",
+            "falkordb/falkordb:v4.4.1",
+        ], capture_output=True)
+    # Wait for ready
+    import time
+    for _ in range(10):
+        ping = subprocess.run(["docker", "exec", "km-falkordb", "redis-cli", "ping"],
+                              capture_output=True, text=True)
+        if "PONG" in ping.stdout:
+            break
+        time.sleep(1)
+    console.print("  [green]✓[/] FalkorDB running")
 
     # Check/pull Ollama model
     console.print("  [dim]Checking embedding model...[/]")
@@ -93,8 +104,8 @@ def start():
 @app.command()
 def stop():
     """Stop Knowledge Master containers."""
-    compose_file = PROJECT_DIR / "docker-compose.yml"
-    subprocess.run(["docker", "compose", "-f", str(compose_file), "down"], capture_output=True)
+    subprocess.run(["docker", "stop", "km-falkordb"], capture_output=True)
+    subprocess.run(["docker", "rm", "km-falkordb"], capture_output=True)
     console.print("[green]✓[/] Knowledge Master stopped")
 
 
