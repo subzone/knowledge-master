@@ -36,6 +36,8 @@ nav:
     - Claude Desktop: integrations/claude-desktop.md
     - Cursor: integrations/cursor.md
     - Kiro: integrations/kiro.md
+    - GitHub Copilot: integrations/github-copilot.md
+    - Antigravity: integrations/antigravity.md
     - Docker: integrations/docker.md
 
 markdown_extensions:
